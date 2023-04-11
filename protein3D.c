@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <pthread.h>
 
 //Options
 #define C1
@@ -9,6 +10,14 @@
 #define WATER_PENALTY
 #define DIM 3
 
+//Bound defines the range of starting positions
+#if (DIM / 2) < (DIM - DIM / 2)
+#   define BOUND DIM - DIM / 2
+#else
+#   define BOUND DIM / 2
+#endif
+
+//WP is the Water Penalty Amount
 #define WP 2.5
 
 
@@ -409,6 +418,25 @@ void save_grid(acid * pgrid[DIM][DIM][DIM], acid * acids[NUM_ACIDS])
 }
 
 
+struct thread_arg
+{
+    int x;
+    int y;
+    int z;
+    acid * pgrid[DIM][DIM][DIM];
+    acid * acids_list[NUM_ACIDS];
+};
+typedef struct thread_arg thread_arg;
+
+void* thread_func(void* varg)
+{
+    printf("thread started\n");
+    thread_arg * arguments = (thread_arg*) varg;
+    printf("Starting point: %d, %d, %d\n", arguments->x, arguments->y, arguments->z);
+    return NULL;
+}
+
+
 
 int main(int argc, char** argv)
 {
@@ -475,19 +503,26 @@ int main(int argc, char** argv)
     }
 
 
-    int bound = DIM / 2;
-    if (bound < (DIM - bound))
-    {
-        bound = DIM - bound;
-    }
-    printf("Using bound of %d\n", bound);
+    printf("Using BOUND = %d\n", BOUND);
 
+    pthread_t thread;
+    thread_arg * arg = calloc(sizeof(thread_arg), 1);
+    arg->x = 0;
+    arg->y = 1;
+    arg->z = 2;
+    memcpy(arg->pgrid, grid, sizeof(acid*)*DIM*DIM*DIM);
+    memcpy(arg->acids_list, acids, sizeof(acid*)*NUM_ACIDS);
+    int ret = pthread_create(&thread, NULL, thread_func, arg);
+    
+    pthread_join(thread, NULL);
 
-    for (int x = 0; x < bound; x++)
+    exit(1);
+
+    for (int x = 0; x < BOUND; x++)
     {
-        for (int y = 0; y < bound; y++)
+        for (int y = 0; y < BOUND; y++)
         {
-            for (int z = 0; z < bound; z++)
+            for (int z = 0; z < BOUND; z++)
             {
                 printf("Starting point: (%d, %d, %d)\n", x, y, z);
                 acid * tmp_grid[DIM][DIM][DIM];
