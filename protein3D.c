@@ -4,9 +4,9 @@
 #include <stdbool.h>
 
 //Options
-// #define C1
-// #define C2
-// #define WATER_PENALTY
+#define C1
+#define C2
+#define WATER_PENALTY
 #define DIM 3
 
 #define WP 2.5
@@ -383,6 +383,32 @@ void insert(acid * pgrid[DIM][DIM][DIM], acid * acids_list[NUM_ACIDS], int index
     }
 }
 
+#define GRID_FILENAME "grid.out.txt"
+void save_grid(acid * pgrid[DIM][DIM][DIM], acid * acids[NUM_ACIDS])
+{
+    FILE * f = fopen(GRID_FILENAME, "w");
+
+    for (int index = 0; index < NUM_ACIDS; index++)
+    {
+        acid * curr_acid = acids[index];
+        for (int x = 0; x < DIM; x++)
+        {
+            for (int y = 0; y < DIM; y++)
+            {
+                for (int z = 0; z < DIM; z++)
+                {
+                    if (curr_acid == pgrid[x][y][z])
+                    {
+                        fprintf(f, "%s,%d,%d,%d\n", curr_acid->name, x, y, z);
+                    } 
+                }
+            }
+        }
+    }
+    fclose(f);
+}
+
+
 
 int main(int argc, char** argv)
 {
@@ -449,12 +475,19 @@ int main(int argc, char** argv)
     }
 
 
-
-    for (int x = 0; x < DIM; x++)
+    int bound = DIM / 2;
+    if (bound < (DIM - bound))
     {
-        for (int y = 0; y < DIM; y++)
+        bound = DIM - bound;
+    }
+    printf("Using bound of %d\n", bound);
+
+
+    for (int x = 0; x < bound; x++)
+    {
+        for (int y = 0; y < bound; y++)
         {
-            for (int z = 0; z < DIM; z++)
+            for (int z = 0; z < bound; z++)
             {
                 printf("Starting point: (%d, %d, %d)\n", x, y, z);
                 acid * tmp_grid[DIM][DIM][DIM];
@@ -475,6 +508,7 @@ int main(int argc, char** argv)
     //Write to PDB file
     //write_PDB(optimal_configuration);
     write_PDB_TWO(optimal_configuration, acids);
+    save_grid(optimal_configuration, acids);
 
 
     //Cleanup
