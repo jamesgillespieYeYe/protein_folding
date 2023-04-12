@@ -5,9 +5,9 @@
 #include <pthread.h>
 
 //Options
-//#define C1
-//#define C2
-//#define WATER_PENALTY
+#define C1
+#define C2
+#define WATER_PENALTY
 #define DIM 3
 
 //Bound defines the range of starting positions
