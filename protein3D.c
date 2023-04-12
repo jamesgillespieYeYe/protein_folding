@@ -5,9 +5,9 @@
 #include <pthread.h>
 
 //Options
-#define C1
-#define C2
-#define WATER_PENALTY
+//#define C1
+//#define C2
+//#define WATER_PENALTY
 #define DIM 3
 
 //Bound defines the range of starting positions
@@ -19,6 +19,16 @@
 
 //WP is the Water Penalty Amount
 #define WP 2.5
+
+//Values for contacts
+// #define Hhh -2
+// #define Hhp -1
+// #define Hpp -0.1
+
+#define Hhh -2.3
+#define Hhp -1
+#define Hpp 0
+
 
 
 //#define NUM_ACIDS 20
@@ -44,10 +54,23 @@ struct coordinate
 };
 typedef struct coordinate coordinate;
 
+struct thread_arg
+{
+    int x;
+    int y;
+    int z;
+    acid * pgrid[DIM][DIM][DIM];
+    acid * acids_list[NUM_ACIDS];
+    long num_valid_configurations;
+    double min_energy;
+    acid * optimal_configuration[DIM][DIM][DIM];
+    long num_recursive_calls;
+    int num_new_mins;
+};
+typedef struct thread_arg thread_arg;
 
 
 
-long num_recursive_calls;
 
 
 coordinate * get_positions(int x, int y, int z);
@@ -176,19 +199,19 @@ double Energy(acid * a, acid * b)
 {
     if (a->hydrophilic == false && b->hydrophilic == false)
     {
-        return -2;
+        return Hhh;
     }
     else if (a->hydrophilic == true && b->hydrophilic == false)
     {
-        return -1;
+        return Hhp;
     }
     else if (a->hydrophilic == false && b->hydrophilic == true)
     {
-        return -1;
+        return Hhp;
     }
     else 
     {
-        return -0.1;
+        return Hpp;
     }
 }
 
@@ -344,31 +367,28 @@ void print_grid(acid * pgrid[DIM][DIM][DIM])
 
 
 
-long num_valid_configurations = 0;
-double min_energy = 999;
-long num_new_mins = 0;
-acid * optimal_configuration[DIM][DIM][DIM];
+
 
 /**
  * Recursive callback
  * Look at all positions adjacent to (lastX, lastY, lastZ), and try placing next acid there if possible
 */
-void insert(acid * pgrid[DIM][DIM][DIM], acid * acids_list[NUM_ACIDS], int index, int lastX, int lastY, int lastZ)
+void insert(acid * pgrid[DIM][DIM][DIM], acid * acids_list[NUM_ACIDS], int index, int lastX, int lastY, int lastZ, thread_arg * args)
 {
-    num_recursive_calls++;
+    args->num_recursive_calls++;
     if (index == NUM_ACIDS)
     {
-        num_valid_configurations++;
-        if (num_valid_configurations % 10000000 == 0)
+        args->num_valid_configurations++;
+        if (args->num_valid_configurations % 10000000 == 0)
         {
-            printf("Base case number: %ld\n", num_valid_configurations);
+            printf("(Thread %ld) Base case number: %ld\n", pthread_self(), args->num_valid_configurations);
         }
         double energy = Total_Energy(pgrid);
-        if (energy < min_energy)
+        if (energy < args->min_energy)
         {
-            min_energy = energy;
-            memcpy(optimal_configuration, pgrid, sizeof(acid*)*DIM*DIM*DIM);
-            num_new_mins++;
+            args->min_energy = energy;
+            memcpy(args->optimal_configuration, pgrid, sizeof(acid*)*DIM*DIM*DIM);
+            args->num_new_mins++;
         }
         return;
     }
@@ -386,7 +406,7 @@ void insert(acid * pgrid[DIM][DIM][DIM], acid * acids_list[NUM_ACIDS], int index
             memcpy(next_grid, pgrid, sizeof(acid*)*DIM*DIM*DIM);
             next_grid[pmove->x][pmove->y][pmove->z] = acids_list[index];
 
-            insert(next_grid, acids_list, index + 1, pmove->x, pmove->y, pmove->z);
+            insert(next_grid, acids_list, index + 1, pmove->x, pmove->y, pmove->z, args);
         }
         pmove++;
     }
@@ -396,7 +416,7 @@ void insert(acid * pgrid[DIM][DIM][DIM], acid * acids_list[NUM_ACIDS], int index
 void save_grid(acid * pgrid[DIM][DIM][DIM], acid * acids[NUM_ACIDS])
 {
     FILE * f = fopen(GRID_FILENAME, "w");
-
+    fprintf(f, "acid,x,y,z,hydrophilic\n");
     for (int index = 0; index < NUM_ACIDS; index++)
     {
         acid * curr_acid = acids[index];
@@ -408,7 +428,15 @@ void save_grid(acid * pgrid[DIM][DIM][DIM], acid * acids[NUM_ACIDS])
                 {
                     if (curr_acid == pgrid[x][y][z])
                     {
-                        fprintf(f, "%s,%d,%d,%d\n", curr_acid->name, x, y, z);
+                        if (curr_acid->hydrophilic == true)
+                        {
+                            fprintf(f, "%s,%d,%d,%d,True\n", curr_acid->name, x, y, z);
+                        }
+                        else
+                        {
+                            fprintf(f, "%s,%d,%d,%d,False\n", curr_acid->name, x, y, z);
+                        }
+                        
                     } 
                 }
             }
@@ -418,21 +446,14 @@ void save_grid(acid * pgrid[DIM][DIM][DIM], acid * acids[NUM_ACIDS])
 }
 
 
-struct thread_arg
-{
-    int x;
-    int y;
-    int z;
-    acid * pgrid[DIM][DIM][DIM];
-    acid * acids_list[NUM_ACIDS];
-};
-typedef struct thread_arg thread_arg;
+
 
 void* thread_func(void* varg)
 {
-    printf("thread started\n");
-    thread_arg * arguments = (thread_arg*) varg;
-    printf("Starting point: %d, %d, %d\n", arguments->x, arguments->y, arguments->z);
+    thread_arg * arg = (thread_arg*) varg;
+    printf("New thread: %ld: %d, %d, %d\n", pthread_self(), arg->x, arg->y, arg->z);
+    arg->pgrid[arg->x][arg->y][arg->z] = arg->acids_list[0];
+    insert(arg->pgrid, arg->acids_list, 1, arg->x, arg->y, arg->z, arg);
     return NULL;
 }
 
@@ -505,18 +526,12 @@ int main(int argc, char** argv)
 
     printf("Using BOUND = %d\n", BOUND);
 
-    pthread_t thread;
-    thread_arg * arg = calloc(sizeof(thread_arg), 1);
-    arg->x = 0;
-    arg->y = 1;
-    arg->z = 2;
-    memcpy(arg->pgrid, grid, sizeof(acid*)*DIM*DIM*DIM);
-    memcpy(arg->acids_list, acids, sizeof(acid*)*NUM_ACIDS);
-    int ret = pthread_create(&thread, NULL, thread_func, arg);
     
-    pthread_join(thread, NULL);
 
-    exit(1);
+
+
+    thread_arg * ThreadData[BOUND][BOUND][BOUND];
+    pthread_t threads[BOUND][BOUND][BOUND];
 
     for (int x = 0; x < BOUND; x++)
     {
@@ -524,29 +539,63 @@ int main(int argc, char** argv)
         {
             for (int z = 0; z < BOUND; z++)
             {
-                printf("Starting point: (%d, %d, %d)\n", x, y, z);
-                acid * tmp_grid[DIM][DIM][DIM];
-                memcpy(tmp_grid, grid, sizeof(acid*)*DIM*DIM*DIM);
-                tmp_grid[x][y][z] = acids[0];
-                insert(tmp_grid, acids, 1, x, y, z);
+                ThreadData[x][y][z] = calloc(sizeof(thread_arg), 1);
+                thread_arg * arg = ThreadData[x][y][z];
+                arg->x = x;
+                arg->y = y;
+                arg->z = z;
+                arg->min_energy = 99999;
+                memcpy(arg->pgrid, grid, sizeof(acid*)*DIM*DIM*DIM);
+                memcpy(arg->acids_list, acids, sizeof(acid*)*NUM_ACIDS);
+                int ret = pthread_create(&threads[x][y][z], NULL, thread_func, arg);
             }
         }
     }
 
-    printf("Num Recursive Calls: %ld\n", num_recursive_calls);
-    printf("Valid configurations tested: %ld\n", num_valid_configurations);
-    printf("Num new mins: %ld\n", num_new_mins);
-    printf("Min energy: %f\n", min_energy);
-    printf("Optimal configuration:\n");
-    print_grid(optimal_configuration);
+    long total_recursive_calls = 0;
+    long total_valid_configurations = 0;
+    double true_min_energy = 9999;
+    acid * true_optimal_grid[DIM][DIM][DIM];
+    for (int x = 0; x < BOUND; x++)
+    {
+        for (int y = 0; y < BOUND; y++)
+        {
+            for (int z = 0; z < BOUND; z++)
+            {
+                pthread_join(threads[x][y][z], NULL);
+                printf("Summary of thread %ld:\n", threads[x][y][z]);
+                thread_arg * arg = ThreadData[x][y][z];
+                printf("Recursive Calls: %ld, Valid Configurations: %ld, # New Mins: %d\n", 
+                    arg->num_recursive_calls, arg->num_valid_configurations, arg->num_new_mins);
+                printf("Minimum Energy: %f\n", arg->min_energy);
+                //printf("Optimal Configuration:\n");
+                //print_grid(arg->optimal_configuration);
+                total_recursive_calls += arg->num_recursive_calls;
+                total_valid_configurations += arg->num_valid_configurations;
+                if (arg->min_energy < true_min_energy)
+                {
+                    memcpy(true_optimal_grid, arg->optimal_configuration, sizeof(acid*)*DIM*DIM*DIM);
+                    true_min_energy = arg->min_energy;
+                }
+                
+            }
+        }
+    }
+    printf("\n\n");
+    printf("Total Recursive Calls: %ld\n", total_recursive_calls);
+    printf("Total valid configurations: %ld\n", total_valid_configurations);
+    printf("True Minimum Energy: %f\n", true_min_energy);
+    printf("True optimal state: \n");
+    print_grid(true_optimal_grid);
 
-    //Write to PDB file
-    //write_PDB(optimal_configuration);
-    write_PDB_TWO(optimal_configuration, acids);
-    save_grid(optimal_configuration, acids);
+    
+    
+    // //Write to PDB file
+    // //write_PDB(optimal_configuration);
+    // write_PDB_TWO(optimal_configuration, acids);
+    save_grid(true_optimal_grid, acids);
 
-
-    //Cleanup
+    // //Cleanup
     for (int x = 0; x < DIM; x++)
     {
         for (int y = 0; y < DIM; y++)
@@ -557,10 +606,22 @@ int main(int argc, char** argv)
             }
         }
     }
+    for (int x = 0; x < BOUND; x++)
+    {
+        for (int y = 0; y < BOUND; y++)
+        {
+            for (int z = 0; z < BOUND; z++)
+            {
+                free(ThreadData[x][y][z]);
+            }
+        }
+    }
     for (int i = 0; i < NUM_ACIDS;i++)
     {
         free(acids[i]);
     }
+
+    
 
 }
 
