@@ -7,7 +7,7 @@
 //Options
 #define C1
 #define C2
-#define WATER_PENALTY
+//#define WATER_PENALTY
 #define DIM 3
 
 //Bound defines the range of starting positions
@@ -31,8 +31,8 @@
 
 
 
-//#define NUM_ACIDS 20
 #define NUM_ACIDS 20
+//#define NUM_ACIDS 27
 #define NUM_HYDROPHILIC 7
 
 struct acid 
@@ -197,6 +197,10 @@ double Total_Water_Penalty(acid * pgrid[DIM][DIM][DIM])
 */
 double Energy(acid * a, acid * b)
 {
+    if (a->prev == b || a->next == b)
+    {
+        return 0;
+    }
     if (a->hydrophilic == false && b->hydrophilic == false)
     {
         return Hhh;
@@ -282,7 +286,7 @@ double Total_Energy(acid * pgrid[DIM][DIM][DIM])
 
 
 char * Sequence[NUM_ACIDS] = {"ASN", "LEU", "TYR", "ILE", "GLN", "TRP", "LEU", "LYS", "ASP", "GLY", "GLY", "PRO", "SER", "SER", "GLY", "ARG", "PRO", "PRO", "PRO", "SER"};
-//char * Sequence[NUM_ACIDS] = {"ASN", "LEU", "TYR"};
+//char * Sequence[NUM_ACIDS] = {"ASN", "LEU", "TYR", "ILE", "GLN", "TRP", "LEU", "LYS", "ASP", "GLY", "GLY", "PRO", "SER", "SER", "GLY", "ARG", "PRO", "PRO", "PRO", "SER","SER", "GLY", "ARG", "PRO", "PRO", "PRO", "SER"};
 char * Hydrophilic[NUM_HYDROPHILIC] = {"ASP", "ARG", "LYS", "GLY", "ASN", "SER", "GLN"};
 
 
@@ -451,10 +455,60 @@ void save_grid(acid * pgrid[DIM][DIM][DIM], acid * acids[NUM_ACIDS])
 void* thread_func(void* varg)
 {
     thread_arg * arg = (thread_arg*) varg;
-    printf("New thread: %ld: %d, %d, %d\n", pthread_self(), arg->x, arg->y, arg->z);
+    printf("New thread: %ld: Initial Position: (%d, %d, %d)\n", pthread_self(), arg->x, arg->y, arg->z);
     arg->pgrid[arg->x][arg->y][arg->z] = arg->acids_list[0];
     insert(arg->pgrid, arg->acids_list, 1, arg->x, arg->y, arg->z, arg);
     return NULL;
+}
+
+
+void print_acids(acid * first)
+{
+    acid * curr = first;
+    while (curr != NULL)
+    {
+        printf("%s--", curr->name);
+        curr = curr->next;
+    }
+    printf("\n");
+    curr = first;
+    while (curr != NULL)
+    {
+        if (curr->hydrophilic == true)
+        {
+            printf("P----");
+        }
+        else
+        {
+            printf("H----");
+        }
+        curr = curr->next;
+    }
+    printf("\n");
+}
+void print_acids_backwards(acid * last)
+{
+    acid * curr = last;
+    while (curr != NULL)
+    {
+        printf("%s--", curr->name);
+        curr = curr->prev;
+    }
+    printf("\n");
+    curr = last;
+    while (curr != NULL)
+    {
+        if (curr->hydrophilic == true)
+        {
+            printf("P----");
+        }
+        else
+        {
+            printf("H----");
+        }
+        curr = curr->prev;
+    }
+    printf("\n");
 }
 
 
@@ -476,7 +530,6 @@ int main(int argc, char** argv)
     
     acid * grid[DIM][DIM][DIM];
     memset((void*) grid, 0, sizeof(acid*)*DIM*DIM*DIM);
-    print_grid(grid);
 
     //Assemble Spatial Database
     for (int x = 0; x < DIM; x++)
@@ -523,13 +576,10 @@ int main(int argc, char** argv)
         prev = acids[i];
     }
 
-
-    printf("Using BOUND = %d\n", BOUND);
-
+    print_acids(acids[0]);
+    print_acids_backwards(acids[NUM_ACIDS - 1]);
     
-
-
-
+    printf("Using %d as bound on starting position\n", BOUND);
     thread_arg * ThreadData[BOUND][BOUND][BOUND];
     pthread_t threads[BOUND][BOUND][BOUND];
 
@@ -581,7 +631,6 @@ int main(int argc, char** argv)
             }
         }
     }
-    printf("\n\n");
     printf("Total Recursive Calls: %ld\n", total_recursive_calls);
     printf("Total valid configurations: %ld\n", total_valid_configurations);
     printf("True Minimum Energy: %f\n", true_min_energy);

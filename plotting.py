@@ -28,6 +28,9 @@ for index in range(0, len(data)):
     size.append(20)
 
 ax.scatter3D(xData, yData, zData, '--o', s = size, c = colors)
+for index in range(0, len(data)):
+    row = data.loc[index]
+    ax.text(row['x'], row['y'], row['z'], row['acid'] + ' ' + str(index))
 ax.plot3D(xData, yData, zData, '--')
 
 
