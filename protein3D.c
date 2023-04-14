@@ -1,81 +1,19 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <pthread.h>
-
-//Options
-#define C1
-#define C2
-//#define WATER_PENALTY
-#define DIM 3
-
-//Bound defines the range of starting positions
-#if (DIM / 2) < (DIM - DIM / 2)
-#   define BOUND DIM - DIM / 2
-#else
-#   define BOUND DIM / 2
-#endif
-
-//WP is the Water Penalty Amount
-#define WP 2.5
-
-//Values for contacts
-// #define Hhh -2
-// #define Hhp -1
-// #define Hpp -0.1
-
-#define Hhh -2.3
-#define Hhp -1
-#define Hpp 0
-
-
-
-#define NUM_ACIDS 20
-//#define NUM_ACIDS 27
-#define NUM_HYDROPHILIC 7
-
-struct acid 
-{
-    char name[4];
-    bool hydrophilic;
-    struct acid * prev;
-    struct acid * next;
-};
-typedef struct acid acid;
-
-struct coordinate
-{
-    int x;
-    int y;
-    int z;
-    double diagonal;
-    int valid;
-};
-typedef struct coordinate coordinate;
-
-struct thread_arg
-{
-    int x;
-    int y;
-    int z;
-    acid * pgrid[DIM][DIM][DIM];
-    acid * acids_list[NUM_ACIDS];
-    long num_valid_configurations;
-    double min_energy;
-    acid * optimal_configuration[DIM][DIM][DIM];
-    long num_recursive_calls;
-    int num_new_mins;
-};
-typedef struct thread_arg thread_arg;
+// #include <stdio.h>
+// #include <string.h>
+// #include <stdlib.h>
+// #include <stdbool.h>
+// #include <pthread.h>
+#include "definitions.h"
 
 
 
 
 
-coordinate * get_positions(int x, int y, int z);
+
+
+//coordinate * get_positions(int x, int y, int z);
 coordinate * Spatial_Database[DIM][DIM][DIM];
-void print_grid(acid * pgrid[DIM][DIM][DIM]);
+//void print_grid(acid * pgrid[DIM][DIM][DIM]);
 
 
 #ifdef WATER_PENALTY
@@ -192,38 +130,13 @@ double Total_Water_Penalty(acid * pgrid[DIM][DIM][DIM])
 #endif
 
 
-/**
- * Give the energy between the acid pair (a, b)
-*/
-double Energy(acid * a, acid * b)
-{
-    if (a->prev == b || a->next == b)
-    {
-        return 0;
-    }
-    if (a->hydrophilic == false && b->hydrophilic == false)
-    {
-        return Hhh;
-    }
-    else if (a->hydrophilic == true && b->hydrophilic == false)
-    {
-        return Hhp;
-    }
-    else if (a->hydrophilic == false && b->hydrophilic == true)
-    {
-        return Hhp;
-    }
-    else 
-    {
-        return Hpp;
-    }
-}
+
 
 /**
  * Compute the total energy of a configuration by examining energies of 
  * all adjacencies
 */
-double Total_Energy(acid * pgrid[DIM][DIM][DIM])
+double Total_Energy(acid * pgrid[DIM][DIM][DIM], acid * acids_list[NUM_ACIDS])
 {
     double ret = 0;
     acid * grid[DIM][DIM][DIM];
@@ -280,14 +193,25 @@ double Total_Energy(acid * pgrid[DIM][DIM][DIM])
 #   ifdef WATER_PENALTY
     ret += Total_Water_Penalty(pgrid);
 #   endif
+// #   ifndef C_1
+// #       ifndef C_2
+//     contact_map * map = gen_contact_map(pgrid, Spatial_Database);
+//     double ret_energy = compute_energy_map(map, acids_list);
+//     if (!(ret_energy - ret < .001 && ret - ret_energy < .001))
+//     {
+//         printf("DISAGREEMENT\n");
+//         printf("%f, %f", ret, ret_energy);
+//         exit(1);
+//     }
+//     free(map);
+// #       endif
+// #   endif
     return ret;
 }
 
 
 
-char * Sequence[NUM_ACIDS] = {"ASN", "LEU", "TYR", "ILE", "GLN", "TRP", "LEU", "LYS", "ASP", "GLY", "GLY", "PRO", "SER", "SER", "GLY", "ARG", "PRO", "PRO", "PRO", "SER"};
-//char * Sequence[NUM_ACIDS] = {"ASN", "LEU", "TYR", "ILE", "GLN", "TRP", "LEU", "LYS", "ASP", "GLY", "GLY", "PRO", "SER", "SER", "GLY", "ARG", "PRO", "PRO", "PRO", "SER","SER", "GLY", "ARG", "PRO", "PRO", "PRO", "SER"};
-char * Hydrophilic[NUM_HYDROPHILIC] = {"ASP", "ARG", "LYS", "GLY", "ASN", "SER", "GLN"};
+
 
 
 
@@ -344,34 +268,25 @@ void write_PDB_TWO(acid * pgrid[DIM][DIM][DIM], acid * acids[NUM_ACIDS])
 }
 
 
-void print_grid(acid * pgrid[DIM][DIM][DIM])
+
+
+
+
+
+bool areDifferent(contact_map * one, contact_map * two)
 {
-    for (int z = 0; z < DIM; z++)
+    for (int i = 0; i < NUM_ACIDS; i++)
     {
-        printf("Slice: z = %d\n", z);
-        for (int x = 0; x < DIM; x++)
+        for (int j = 0; j < NUM_ACIDS; j++)
         {
-            for (int y = 0; y < DIM; y++)
+            if (one->map[i][j] != two->map[i][j])
             {
-                acid * curr = pgrid[x][y][z];
-                if (curr == NULL)
-                {
-                    printf("NULL ");
-                }
-                else
-                {
-                    printf("%s  ", curr->name);
-                }
+                return true;
             }
-            printf("\n");
         }
     }
+    return false;
 }
-
-
-
-
-
 
 /**
  * Recursive callback
@@ -387,13 +302,59 @@ void insert(acid * pgrid[DIM][DIM][DIM], acid * acids_list[NUM_ACIDS], int index
         {
             printf("(Thread %ld) Base case number: %ld\n", pthread_self(), args->num_valid_configurations);
         }
-        double energy = Total_Energy(pgrid);
+        double energy = Total_Energy(pgrid, acids_list);
         if (energy < args->min_energy)
         {
             args->min_energy = energy;
             memcpy(args->optimal_configuration, pgrid, sizeof(acid*)*DIM*DIM*DIM);
             args->num_new_mins++;
         }
+#   ifndef C1
+#       ifndef C2
+        for (int index = 0; index < NUM_TRACK; index++)
+        {
+            if (energy < args->best_energies[index].energy)
+            {
+                //We found a new structure we might want, but we need to check if it is unique
+                bool isUnique = true;
+                contact_map * tmp = gen_contact_map(pgrid, Spatial_Database);
+                for (int i = 0; i < NUM_TRACK; i++)
+                {
+                    if (args->best_energies[i].map != NULL)
+                    {
+                        if (!areDifferent(tmp, args->best_energies[i].map))
+                        {
+                            isUnique = false;
+                        }
+                    }
+                }
+                free(tmp);
+                if (isUnique == true)
+                {
+                    if (args->best_energies[index].map != NULL)
+                    {
+                        //printf("not null\n");
+                        free(args->best_energies[index].map);
+                    }
+                    else
+                    {
+                        printf("%d null\n", index);
+                        //print_contact_map(curr.map);
+                    }
+                    memcpy(args->best_energies[index].grid, pgrid, sizeof(acid*)*DIM*DIM*DIM);
+                    args->best_energies[index].map = gen_contact_map(pgrid, Spatial_Database);
+                    if (args->best_energies[index].map == NULL)
+                    {
+                        exit(1);
+                    }
+                    args->best_energies[index].energy = energy;
+                    break;
+                }
+                
+            }
+        }
+#       endif
+#   endif
         return;
     }
 
@@ -553,6 +514,7 @@ int main(int argc, char** argv)
         acids[i] = calloc(sizeof(acid), 1);
         strcpy(acids[i]->name, Sequence[i]);
         acids[i]->hydrophilic = false;
+        acids[i]->index = i;
         if (prev != NULL)
         {
             acids[i]->prev = prev;
@@ -636,7 +598,28 @@ int main(int argc, char** argv)
     printf("True Minimum Energy: %f\n", true_min_energy);
     printf("True optimal state: \n");
     print_grid(true_optimal_grid);
-
+    #ifndef C1
+    #ifndef C2
+    for (int x = 0; x < BOUND; x++)
+    {
+        for (int y = 0; y < BOUND; y++)
+        {
+            for (int z = 0; z < BOUND; z++)
+            {
+                printf("Thread starting @ (%d, %d, %d)\n", ThreadData[x][y][z]->x, ThreadData[x][y][z]->y, ThreadData[x][y][z]->z);
+                for (int index = 0; index < NUM_TRACK; index++)
+                {
+                    entry curr = ThreadData[x][y][z]->best_energies[index];
+                    // printf("Entry: ");
+                    // print_grid(curr.grid);
+                    // print_contact_map(curr.map);
+                    printf("Energy: %f\n", curr.energy);
+                }
+            }
+        }
+    }
+    #endif
+    #endif
     
     
     // //Write to PDB file
@@ -674,173 +657,3 @@ int main(int argc, char** argv)
 
 }
 
-/**
- * Return Adjacent, C1 Diagonals, C2 Diagonals
- * Adjacent <==> coordinate is 1 unit from source (6)
- * C1 Diagonal <==> coordinate is sqrt(2) away from source (12)
- * C2 Diagonal <==> coordinate is sqrt(3) away from source (8)
-*/
-coordinate * get_positions(int x, int y, int z)
-{
-    coordinate * ret = calloc(sizeof(coordinate), 27);
-    coordinate * tmp = ret;
-
-
-    //Directly adjacent
-    if (0 <= x - 1)
-    {
-        tmp->x = x - 1;
-        tmp->y = y;
-        tmp->z = z;
-        tmp->valid = 1;
-        tmp++;
-    }
-    if (x + 1 < DIM)
-    {
-        tmp->x = x + 1;
-        tmp->y = y;
-        tmp->z = z;
-        tmp->valid = 1;
-        tmp++;
-    }
-
-    if (0 <= y - 1)
-    {
-        tmp->x = x;
-        tmp->y = y - 1;
-        tmp->z = z;
-        tmp->valid = 1;
-        tmp++;
-    }
-    if (y + 1 < DIM)
-    {
-        tmp->x = x;
-        tmp->y = y + 1;
-        tmp->z = z;
-        tmp->valid = 1;
-        tmp++;
-    }
-
-    if (0 <= z - 1)
-    {
-        tmp->x = x;
-        tmp->y = y;
-        tmp->z = z - 1;
-        tmp->valid = 1;
-        tmp++;
-    }
-    if (z + 1 < DIM)
-    {
-        tmp->x = x;
-        tmp->y = y;
-        tmp->z = z + 1;
-        tmp->valid = 1;
-        tmp++;
-    }
-
-#   ifdef C1
-    //C1 Diagonals in x = +/- 1 planes
-    //Up to 8 coordinates
-    
-    int x_pm_1[2] = {x - 1, x + 1};
-    int y_pm_1[2] = {y - 1, y + 1};
-    int z_pm_1[2] = {z - 1, z + 1};
-    for (int i = 0; i < 2; i++)
-    {
-        int currX = x_pm_1[i];
-        if (0 <= currX && currX < DIM)
-        {
-            //y = +/- 1, z = z
-            
-            for (int j = 0; j < 2; j++)
-            {
-                int currY = y_pm_1[j];
-                if (0 <= currY && currY < DIM)
-                {
-                    tmp->x = currX;
-                    tmp->y = currY;
-                    tmp->z = z;
-                    tmp->valid = 1;
-                    tmp->diagonal = 1;
-                    tmp++;
-                }
-            }
-
-            
-            for (int j = 0; j < 2; j++)
-            {
-                int currZ = z_pm_1[j];
-                if (0 <= currZ && currZ < DIM)
-                {
-                    tmp->x = currX;
-                    tmp->y = y;
-                    tmp->z = currZ;
-                    tmp->valid = 1;
-                    tmp->diagonal = 1;
-                    tmp++;
-                }
-            }
-        }
-    }
-
-    //C1 diagonals in x = x plane
-    //Up to 4 coordinates
-
-    for (int i = 0; i < 2; i++)
-    {
-        int currY = y_pm_1[i];
-        if (0 <= currY && currY < DIM)
-        {
-            for (int j = 0; j < 2; j++)
-            {
-                int currZ = z_pm_1[j];
-                if (0 <= currZ && currZ < DIM)
-                {
-                    tmp->x = x;
-                    tmp->y = currY;
-                    tmp->z = currZ;
-                    tmp->valid = 1;
-                    tmp->diagonal = 1;
-                    tmp++;
-                }
-            }
-        }
-    }
-
-#   endif
-#   ifdef C2
-
-    //C2 diagonals - up to 8 coordinates
-
-    for (int i = 0; i < 2; i++)
-    {
-        int currX = x_pm_1[i];
-        if (0 <= currX && currX < DIM)
-        {
-            for (int j = 0; j < 2; j++)
-            {
-                int currY = y_pm_1[j];
-                if (0 <= currY && currY < DIM)
-                {
-                    for (int k = 0; k < 2; k++)
-                    {
-                        int currZ = z_pm_1[k];
-                        if (0 <= currZ && currZ < DIM)
-                        {
-                            tmp->x = currX;
-                            tmp->y = currY;
-                            tmp->z = currZ;
-                            tmp->valid = 1;
-                            tmp->diagonal = 2;
-                            tmp++;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-#   endif
-
-    return ret;
-}
