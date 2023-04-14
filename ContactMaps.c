@@ -4,67 +4,6 @@
 
 
 
-double compute_energy_map(contact_map *map, acid * acids[NUM_ACIDS])
-{
-    double ret = 0;
-    for (int i = 0; i < NUM_ACIDS; i++)
-    {
-        for (int j = 0; j < NUM_ACIDS; j++)
-        {
-            if (map->map[i][j] == 1)
-            {
-                ret += Energy(acids[i], acids[j]);
-            }
-        }
-    }
-    return ret / 2;
-}
-
-void print_contact_map(contact_map * map)
-{
-    for (int i = 0; i < NUM_ACIDS; i++)
-    {
-        for (int j = 0; j < NUM_ACIDS; j++)
-        {
-            printf("%d ", map->map[i][j]);
-        }
-        printf("\n");
-    }
-}
-contact_map * gen_contact_map(acid *pgrid[DIM][DIM][DIM], coordinate * spatial_database[DIM][DIM][DIM])
-{
-    contact_map * ret = calloc(sizeof(contact_map), 1);
-    for (int x = 0; x < DIM; x++)
-    {
-        for (int y = 0; y < DIM; y++)
-        {
-            for (int z = 0; z < DIM; z++)
-            {
-                acid * curr = pgrid[x][y][z];
-                if (curr != NULL)
-                {
-                    printf("name: %s\n", curr->name);
-                    coordinate * adjacent = spatial_database[x][y][z];
-                    coordinate *tmp = adjacent;
-                    while (tmp->valid == 1 && tmp->diagonal == 0)
-                    {
-                        acid * neighbor = pgrid[tmp->x][tmp->y][tmp->z];
-                        if (neighbor != NULL)
-                        {
-                            if (curr->next != neighbor && curr->prev != neighbor)
-                            {
-                                ret->map[curr->index][neighbor->index] = 1;
-                            }
-                            
-                        }
-                        tmp++;
-                    }
-                }
-            }
-        }
-    }
-    return ret;
-}
 
 int load_grid(acid * pgrid[DIM][DIM][DIM], acid * acids[NUM_ACIDS], char * filename)
 {

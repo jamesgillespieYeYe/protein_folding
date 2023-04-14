@@ -306,48 +306,48 @@ void insert(acid * pgrid[DIM][DIM][DIM], acid * acids_list[NUM_ACIDS], int index
         }
 #   ifndef C1
 #       ifndef C2
-        for (int index = 0; index < NUM_TRACK; index++)
-        {
-            if (energy < args->best_energies[index].energy)
-            {
-                //We found a new structure we might want, but we need to check if it is unique
-                bool isUnique = true;
-                contact_map * tmp = gen_contact_map(pgrid, Spatial_Database);
-                for (int i = 0; i < NUM_TRACK; i++)
-                {
-                    if (args->best_energies[i].map != NULL)
-                    {
-                        if (!areDifferent(tmp, args->best_energies[i].map))
-                        {
-                            isUnique = false;
-                        }
-                    }
-                }
-                free(tmp);
-                if (isUnique == true)
-                {
-                    if (args->best_energies[index].map != NULL)
-                    {
-                        //printf("not null\n");
-                        free(args->best_energies[index].map);
-                    }
-                    else
-                    {
-                        printf("%d null\n", index);
-                        //print_contact_map(curr.map);
-                    }
-                    memcpy(args->best_energies[index].grid, pgrid, sizeof(acid*)*DIM*DIM*DIM);
-                    args->best_energies[index].map = gen_contact_map(pgrid, Spatial_Database);
-                    if (args->best_energies[index].map == NULL)
-                    {
-                        exit(1);
-                    }
-                    args->best_energies[index].energy = energy;
-                    break;
-                }
+        // for (int index = 0; index < NUM_TRACK; index++)
+        // {
+        //     if (energy < args->best_energies[index].energy)
+        //     {
+        //         //We found a new structure we might want, but we need to check if it is unique
+        //         bool isUnique = true;
+        //         contact_map * tmp = gen_contact_map(pgrid, Spatial_Database);
+        //         for (int i = 0; i < NUM_TRACK; i++)
+        //         {
+        //             if (args->best_energies[i].map != NULL)
+        //             {
+        //                 if (!areDifferent(tmp, args->best_energies[i].map))
+        //                 {
+        //                     isUnique = false;
+        //                 }
+        //             }
+        //         }
+        //         free(tmp);
+        //         if (isUnique == true)
+        //         {
+        //             if (args->best_energies[index].map != NULL)
+        //             {
+        //                 //printf("not null\n");
+        //                 free(args->best_energies[index].map);
+        //             }
+        //             else
+        //             {
+        //                 printf("%d null\n", index);
+        //                 //print_contact_map(curr.map);
+        //             }
+        //             memcpy(args->best_energies[index].grid, pgrid, sizeof(acid*)*DIM*DIM*DIM);
+        //             args->best_energies[index].map = gen_contact_map(pgrid, Spatial_Database);
+        //             if (args->best_energies[index].map == NULL)
+        //             {
+        //                 exit(1);
+        //             }
+        //             args->best_energies[index].energy = energy;
+        //             break;
+        //         }
                 
-            }
-        }
+        //     }
+        // }
 #       endif
 #   endif
         return;
@@ -595,24 +595,24 @@ int main(int argc, char** argv)
     print_grid(true_optimal_grid);
     #ifndef C1
     #ifndef C2
-    for (int x = 0; x < BOUND; x++)
-    {
-        for (int y = 0; y < BOUND; y++)
-        {
-            for (int z = 0; z < BOUND; z++)
-            {
-                printf("Thread starting @ (%d, %d, %d)\n", ThreadData[x][y][z]->x, ThreadData[x][y][z]->y, ThreadData[x][y][z]->z);
-                for (int index = 0; index < NUM_TRACK; index++)
-                {
-                    entry curr = ThreadData[x][y][z]->best_energies[index];
-                    // printf("Entry: ");
-                    // print_grid(curr.grid);
-                    // print_contact_map(curr.map);
-                    printf("Energy: %f\n", curr.energy);
-                }
-            }
-        }
-    }
+    // for (int x = 0; x < BOUND; x++)
+    // {
+    //     for (int y = 0; y < BOUND; y++)
+    //     {
+    //         for (int z = 0; z < BOUND; z++)
+    //         {
+    //             printf("Thread starting @ (%d, %d, %d)\n", ThreadData[x][y][z]->x, ThreadData[x][y][z]->y, ThreadData[x][y][z]->z);
+    //             for (int index = 0; index < NUM_TRACK; index++)
+    //             {
+    //                 entry curr = ThreadData[x][y][z]->best_energies[index];
+    //                 // printf("Entry: ");
+    //                 // print_grid(curr.grid);
+    //                 // print_contact_map(curr.map);
+    //                 printf("Energy: %f\n", curr.energy);
+    //             }
+    //         }
+    //     }
+    // }
     #endif
     #endif
     
