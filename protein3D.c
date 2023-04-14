@@ -326,10 +326,13 @@ void insert(acid * pgrid[DIM][DIM][DIM], acid * acids_list[NUM_ACIDS], int index
                 //checking if the contact maps are the same
                 //If they aren't the same, we are ok, but if they are,
                 //we break out of the loop
-                if (!areDifferent(tmp, args->best_energies[index].map))
+                if (args->best_energies[index].map != NULL)
                 {
-                    needToSkip = true;
-                    break;
+                    if (!areDifferent(tmp, args->best_energies[index].map))
+                    {
+                        needToSkip = true;
+                        break;
+                    }
                 }
             }
         }
@@ -366,6 +369,57 @@ void insert(acid * pgrid[DIM][DIM][DIM], acid * acids_list[NUM_ACIDS], int index
         }
         //WORST Structures
         needToSkip = false;
+        tmp = gen_contact_map(pgrid, Spatial_Database);
+        for (int index = 0; index < NUM_TRACK; index++)
+        {
+            if (doubleEqual(energy, args->worst_energies[index].energy) == true)
+            {
+                //Need to make sure this is a unique entry by
+                //checking if the contact maps are the same
+                //If they aren't the same, we are ok, but if they are,
+                //we break out of the loop
+                if (args->worst_energies[index].map != NULL)
+                {
+                    if (!areDifferent(tmp, args->worst_energies[index].map))
+                    {
+                        needToSkip = true;
+                        break;
+                    }
+                }
+                
+            }
+        }
+        free(tmp);
+        if (!needToSkip)
+        {
+            for (int index = 0; index < NUM_TRACK; index++)
+            {
+                if (energy > args->worst_energies[index].energy)
+                {
+                    //This structure is unique AND is worse than the current structure
+                    //So we want want to copy this data to this location,
+                    //and shift the others down
+                    entry tmp;
+                    memcpy((void*) &tmp, (void*) &(args->worst_energies[index]), sizeof(entry));
+                    args->worst_energies[index].energy = energy;
+                    args->worst_energies[index].map = gen_contact_map(pgrid, Spatial_Database);
+                    memcpy(args->worst_energies[index].grid, pgrid, sizeof(acid*)*DIM*DIM*DIM);
+                    for (int sub_index = index + 1; sub_index < NUM_TRACK; sub_index++)
+                    {
+                        entry storage;
+                        memcpy((void*) &storage, (void*) &(args->worst_energies[sub_index]), sizeof(entry));
+                        memcpy((void*) &(args->worst_energies[sub_index]), (void*) &tmp, sizeof(entry));
+                        memcpy((void*) &tmp, (void*) &storage, sizeof(entry));
+                    }
+                    //Free the dynamic memory associated with the last entry that got 
+                    //"popped" off the list
+                    free(tmp.map);
+
+
+                    break;
+                }
+            }
+        }
         
 #   endif
         return;
@@ -572,6 +626,12 @@ int main(int argc, char** argv)
                 arg->min_energy = 99999;
                 memcpy(arg->pgrid, grid, sizeof(acid*)*DIM*DIM*DIM);
                 memcpy(arg->acids_list, acids, sizeof(acid*)*NUM_ACIDS);
+#               ifdef TRACK
+                for (int index = 0; index < NUM_TRACK; index++)
+                {
+                    arg->worst_energies[index].energy = -999;
+                }
+#               endif
                 int ret = pthread_create(&threads[x][y][z], NULL, thread_func, arg);
             }
         }
@@ -634,11 +694,24 @@ int main(int argc, char** argv)
                             if (!areDifferent(ThreadData[x][y][z]->best_energies[i].map, 
                                 ThreadData[x][y][z]->best_energies[j].map))
                             {
-                                printf("Error with %d and %d\n", i, j);
+                                printf("Error with best structures: %d and %d\n", i, j);
                             }
                         }
                     }
-                    //ThreadData[x][y][z]->best_energies[i].map;
+                }
+                for (int i = 0; i < NUM_TRACK; i++)
+                {
+                    for (int j = 0; j < NUM_TRACK; j++)
+                    {
+                        if (i != j)
+                        {
+                            if (!areDifferent(ThreadData[x][y][z]->worst_energies[i].map, 
+                                ThreadData[x][y][z]->worst_energies[j].map))
+                            {
+                                printf("Error with WORST structures: %d and %d\n", i, j);
+                            }
+                        }
+                    }
                 }
             }
         }
