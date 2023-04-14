@@ -685,6 +685,7 @@ int main(int argc, char** argv)
                     entry currWorst = ThreadData[x][y][z]->worst_energies[index];
                     printf("Energy: %f %f\n", currBest.energy, currWorst.energy);
                 }
+                //Below can be removed - just a sanity check
                 for (int i = 0; i < NUM_TRACK; i++)
                 {
                     for (int j = 0; j < NUM_TRACK; j++)
@@ -715,6 +716,29 @@ int main(int argc, char** argv)
                 }
             }
         }
+    }
+    //Now we get to find the actual best and worst structures by comparing results
+    //of different threads
+
+    //Step 1 is to ensure no repeats (hypothetically? possible)
+    entry *best_results[NUM_TRACK*BOUND*BOUND*BOUND];
+    entry *worst_results[NUM_TRACK*BOUND*BOUND*BOUND];
+    thread_arg * thread_args_linear[BOUND*BOUND*BOUND];
+    int linearIndex = 0;
+    for (int x = 0; x < BOUND; x++)
+    {
+        for (int y = 0; y < BOUND; y++)
+        {
+            for (int z = 0; z < BOUND; z++)
+            {
+                thread_args_linear[linearIndex] = ThreadData[x][y][z];
+                linearIndex++;
+            }
+        }
+    }
+    for (int index = 0; index < BOUND*BOUND*BOUND; index++)
+    {
+        printf("%d, %d, %d\n", thread_args_linear[index]->x, thread_args_linear[index]->y, thread_args_linear[index]->z);
     }
 #   endif
 

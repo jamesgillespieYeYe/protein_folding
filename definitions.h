@@ -13,14 +13,16 @@
 #ifndef C1
 #define TRACK
 #endif
-#define NUM_TRACK 4
+#define NUM_TRACK 8
 
 //Bound defines the range of starting positions
-#if (DIM / 2) < (DIM - DIM / 2)
-#   define BOUND DIM - DIM / 2
-#else
-#   define BOUND DIM / 2
-#endif
+// #if (DIM / 2) < (DIM - DIM / 2)
+// #   define BOUND DIM - DIM / 2
+// #else
+// #   define BOUND DIM / 2
+// #endif
+
+#define BOUND 2
 
 //WP is the Water Penalty Amount
 #define WP 2.5
