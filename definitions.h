@@ -345,12 +345,23 @@ void print_contact_map(contact_map * map)
 {
     for (int i = 0; i < NUM_ACIDS; i++)
     {
+        printf("--");
+    }
+    printf("\n\n");
+    for (int i = 0; i < NUM_ACIDS; i++)
+    {
         for (int j = 0; j < NUM_ACIDS; j++)
         {
             printf("%d ", map->map[i][j]);
         }
         printf("\n");
     }
+    printf("\n");
+    for (int i = 0; i < NUM_ACIDS; i++)
+    {
+        printf("--");
+    }
+    printf("\n\n");
 }
 contact_map * gen_contact_map(acid *pgrid[DIM][DIM][DIM], coordinate * spatial_database[DIM][DIM][DIM])
 {

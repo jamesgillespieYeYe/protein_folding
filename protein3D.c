@@ -283,7 +283,7 @@ bool areDifferent(contact_map * one, contact_map * two)
     return false;
 }
 
-#define EPS .00001
+#define EPS .01
 bool doubleEqual(double one, double two)
 {
     if (one - two < EPS && two - one < EPS)
@@ -315,48 +315,9 @@ void insert(acid * pgrid[DIM][DIM][DIM], acid * acids_list[NUM_ACIDS], int index
             args->num_new_mins++;
         }
 #   ifdef TRACK //Track the top NUM_TRACK best and worst structures
-        // for (int index = 0; index < NUM_TRACK; index++)
-        // {
-        //     if (energy < args->best_energies[index].energy)
-        //     {
-        //         //We found a new structure we might want, but we need to check if it is unique
-        //         bool isUnique = true;
-        //         contact_map * tmp = gen_contact_map(pgrid, Spatial_Database);
-        //         for (int i = 0; i < NUM_TRACK; i++)
-        //         {
-        //             if (args->best_energies[i].map != NULL)
-        //             {
-        //                 if (!areDifferent(tmp, args->best_energies[i].map))
-        //                 {
-        //                     isUnique = false;
-        //                 }
-        //             }
-        //         }
-        //         free(tmp);
-        //         if (isUnique == true)
-        //         {
-        //             if (args->best_energies[index].map != NULL)
-        //             {
-        //                 //printf("not null\n");
-        //                 free(args->best_energies[index].map);
-        //             }
-        //             else
-        //             {
-        //                 printf("%d null\n", index);
-        //                 //print_contact_map(curr.map);
-        //             }
-        //             memcpy(args->best_energies[index].grid, pgrid, sizeof(acid*)*DIM*DIM*DIM);
-        //             args->best_energies[index].map = gen_contact_map(pgrid, Spatial_Database);
-        //             if (args->best_energies[index].map == NULL)
-        //             {
-        //                 exit(1);
-        //             }
-        //             args->best_energies[index].energy = energy;
-        //             break;
-        //         }
-                
-        //     }
-        // }
+        //BEST Structures
+        bool needToSkip = false;
+        contact_map * tmp = gen_contact_map(pgrid, Spatial_Database);
         for (int index = 0; index < NUM_TRACK; index++)
         {
             if (doubleEqual(energy, args->best_energies[index].energy) == true)
@@ -365,34 +326,47 @@ void insert(acid * pgrid[DIM][DIM][DIM], acid * acids_list[NUM_ACIDS], int index
                 //checking if the contact maps are the same
                 //If they aren't the same, we are ok, but if they are,
                 //we break out of the loop
-
-                break;
-            }
-            if (energy < args->best_energies[index].energy)
-            {
-                //This structure is unique AND is better than the current structure
-                //So we want want to copy this data to this location,
-                //and shift the others down
-                entry tmp;
-                memcpy((void*) &tmp, (void*) &(args->best_energies[index]), sizeof(entry));
-                args->best_energies[index].energy = energy;
-                args->best_energies[index].map = gen_contact_map(pgrid, Spatial_Database);
-                //memcpy(args->best_energies[index].grid, pgrid, sizeof(acid*)*DIM*DIM*DIM);
-                for (int sub_index = index + 1; sub_index < NUM_TRACK; sub_index++)
+                if (!areDifferent(tmp, args->best_energies[index].map))
                 {
-                    entry storage;
-                    memcpy((void*) &storage, (void*) &(args->best_energies[sub_index]), sizeof(entry));
-                    memcpy((void*) &(args->best_energies[sub_index]), (void*) &tmp, sizeof(entry));
-                    memcpy((void*) &tmp, (void*) &storage, sizeof(entry));
+                    needToSkip = true;
+                    break;
                 }
-                //Free the dynamic memory associated with the last entry that got 
-                //"popped" off the list
-                free(tmp.map);
-
-
-                break;
             }
         }
+        free(tmp);
+        if (!needToSkip)
+        {
+            for (int index = 0; index < NUM_TRACK; index++)
+            {
+                if (energy < args->best_energies[index].energy)
+                {
+                    //This structure is unique AND is better than the current structure
+                    //So we want want to copy this data to this location,
+                    //and shift the others down
+                    entry tmp;
+                    memcpy((void*) &tmp, (void*) &(args->best_energies[index]), sizeof(entry));
+                    args->best_energies[index].energy = energy;
+                    args->best_energies[index].map = gen_contact_map(pgrid, Spatial_Database);
+                    memcpy(args->best_energies[index].grid, pgrid, sizeof(acid*)*DIM*DIM*DIM);
+                    for (int sub_index = index + 1; sub_index < NUM_TRACK; sub_index++)
+                    {
+                        entry storage;
+                        memcpy((void*) &storage, (void*) &(args->best_energies[sub_index]), sizeof(entry));
+                        memcpy((void*) &(args->best_energies[sub_index]), (void*) &tmp, sizeof(entry));
+                        memcpy((void*) &tmp, (void*) &storage, sizeof(entry));
+                    }
+                    //Free the dynamic memory associated with the last entry that got 
+                    //"popped" off the list
+                    free(tmp.map);
+
+
+                    break;
+                }
+            }
+        }
+        //WORST Structures
+        needToSkip = false;
+        
 #   endif
         return;
     }
@@ -637,27 +611,40 @@ int main(int argc, char** argv)
     printf("True Minimum Energy: %f\n", true_min_energy);
     printf("True optimal state: \n");
     print_grid(true_optimal_grid);
-    #ifndef C1
-    #ifndef C2
+#   ifdef TRACK
     for (int x = 0; x < BOUND; x++)
     {
         for (int y = 0; y < BOUND; y++)
         {
             for (int z = 0; z < BOUND; z++)
             {
-                printf("Thread starting @ (%d, %d, %d)\n", ThreadData[x][y][z]->x, ThreadData[x][y][z]->y, ThreadData[x][y][z]->z);
-#               ifdef TRACK
+                printf("(%d, %d, %d)   Best   Worst\n", ThreadData[x][y][z]->x, ThreadData[x][y][z]->y, ThreadData[x][y][z]->z);
                 for (int index = 0; index < NUM_TRACK; index++)
                 {
-                    entry curr = ThreadData[x][y][z]->best_energies[index];
-                    printf("Energy: %f\n", curr.energy);
+                    entry currBest = ThreadData[x][y][z]->best_energies[index];
+                    entry currWorst = ThreadData[x][y][z]->worst_energies[index];
+                    printf("Energy: %f %f\n", currBest.energy, currWorst.energy);
                 }
-#               endif
+                for (int i = 0; i < NUM_TRACK; i++)
+                {
+                    for (int j = 0; j < NUM_TRACK; j++)
+                    {
+                        if (i != j)
+                        {
+                            if (!areDifferent(ThreadData[x][y][z]->best_energies[i].map, 
+                                ThreadData[x][y][z]->best_energies[j].map))
+                            {
+                                printf("Error with %d and %d\n", i, j);
+                            }
+                        }
+                    }
+                    //ThreadData[x][y][z]->best_energies[i].map;
+                }
             }
         }
     }
-    #endif
-    #endif
+#   endif
+
     
     
     // //Write to PDB file
