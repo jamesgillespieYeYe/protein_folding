@@ -268,11 +268,6 @@ void write_PDB_TWO(acid * pgrid[DIM][DIM][DIM], acid * acids[NUM_ACIDS])
 }
 
 
-
-
-
-
-
 bool areDifferent(contact_map * one, contact_map * two)
 {
     for (int i = 0; i < NUM_ACIDS; i++)
