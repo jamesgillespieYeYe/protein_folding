@@ -283,6 +283,16 @@ bool areDifferent(contact_map * one, contact_map * two)
     return false;
 }
 
+#define EPS .00001
+bool doubleEqual(double one, double two)
+{
+    if (one - two < EPS && two - one < EPS)
+    {
+        return true;
+    }
+    return false;
+}
+
 /**
  * Recursive callback
  * Look at all positions adjacent to (lastX, lastY, lastZ), and try placing next acid there if possible
@@ -304,8 +314,7 @@ void insert(acid * pgrid[DIM][DIM][DIM], acid * acids_list[NUM_ACIDS], int index
             memcpy(args->optimal_configuration, pgrid, sizeof(acid*)*DIM*DIM*DIM);
             args->num_new_mins++;
         }
-#   ifndef C1
-#       ifndef C2
+#   ifdef TRACK //Track the top NUM_TRACK best and worst structures
         // for (int index = 0; index < NUM_TRACK; index++)
         // {
         //     if (energy < args->best_energies[index].energy)
@@ -348,7 +357,42 @@ void insert(acid * pgrid[DIM][DIM][DIM], acid * acids_list[NUM_ACIDS], int index
                 
         //     }
         // }
-#       endif
+        for (int index = 0; index < NUM_TRACK; index++)
+        {
+            if (doubleEqual(energy, args->best_energies[index].energy) == true)
+            {
+                //Need to make sure this is a unique entry by
+                //checking if the contact maps are the same
+                //If they aren't the same, we are ok, but if they are,
+                //we break out of the loop
+
+                break;
+            }
+            if (energy < args->best_energies[index].energy)
+            {
+                //This structure is unique AND is better than the current structure
+                //So we want want to copy this data to this location,
+                //and shift the others down
+                entry tmp;
+                memcpy((void*) &tmp, (void*) &(args->best_energies[index]), sizeof(entry));
+                args->best_energies[index].energy = energy;
+                args->best_energies[index].map = gen_contact_map(pgrid, Spatial_Database);
+                //memcpy(args->best_energies[index].grid, pgrid, sizeof(acid*)*DIM*DIM*DIM);
+                for (int sub_index = index + 1; sub_index < NUM_TRACK; sub_index++)
+                {
+                    entry storage;
+                    memcpy((void*) &storage, (void*) &(args->best_energies[sub_index]), sizeof(entry));
+                    memcpy((void*) &(args->best_energies[sub_index]), (void*) &tmp, sizeof(entry));
+                    memcpy((void*) &tmp, (void*) &storage, sizeof(entry));
+                }
+                //Free the dynamic memory associated with the last entry that got 
+                //"popped" off the list
+                free(tmp.map);
+
+
+                break;
+            }
+        }
 #   endif
         return;
     }
@@ -595,24 +639,23 @@ int main(int argc, char** argv)
     print_grid(true_optimal_grid);
     #ifndef C1
     #ifndef C2
-    // for (int x = 0; x < BOUND; x++)
-    // {
-    //     for (int y = 0; y < BOUND; y++)
-    //     {
-    //         for (int z = 0; z < BOUND; z++)
-    //         {
-    //             printf("Thread starting @ (%d, %d, %d)\n", ThreadData[x][y][z]->x, ThreadData[x][y][z]->y, ThreadData[x][y][z]->z);
-    //             for (int index = 0; index < NUM_TRACK; index++)
-    //             {
-    //                 entry curr = ThreadData[x][y][z]->best_energies[index];
-    //                 // printf("Entry: ");
-    //                 // print_grid(curr.grid);
-    //                 // print_contact_map(curr.map);
-    //                 printf("Energy: %f\n", curr.energy);
-    //             }
-    //         }
-    //     }
-    // }
+    for (int x = 0; x < BOUND; x++)
+    {
+        for (int y = 0; y < BOUND; y++)
+        {
+            for (int z = 0; z < BOUND; z++)
+            {
+                printf("Thread starting @ (%d, %d, %d)\n", ThreadData[x][y][z]->x, ThreadData[x][y][z]->y, ThreadData[x][y][z]->z);
+#               ifdef TRACK
+                for (int index = 0; index < NUM_TRACK; index++)
+                {
+                    entry curr = ThreadData[x][y][z]->best_energies[index];
+                    printf("Energy: %f\n", curr.energy);
+                }
+#               endif
+            }
+        }
+    }
     #endif
     #endif
     
@@ -639,6 +682,12 @@ int main(int argc, char** argv)
         {
             for (int z = 0; z < BOUND; z++)
             {
+#               ifdef TRACK
+                for (int index = 0; index < NUM_TRACK; index++)
+                {
+                    free(ThreadData[x][y][z]->best_energies[index].map);
+                }
+#               endif
                 free(ThreadData[x][y][z]);
             }
         }

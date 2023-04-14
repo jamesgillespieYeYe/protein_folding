@@ -10,6 +10,10 @@
 //#define C2
 //#define WATER_PENALTY
 #define DIM 3
+#ifndef C1
+#define TRACK
+#endif
+#define NUM_TRACK 4
 
 //Bound defines the range of starting positions
 #if (DIM / 2) < (DIM - DIM / 2)
@@ -70,7 +74,7 @@ struct entry
 };
 typedef struct entry entry;
 
-#define NUM_TRACK 4
+
 struct thread_arg
 {
     int x;
