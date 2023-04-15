@@ -445,9 +445,9 @@ void insert(acid * pgrid[DIM][DIM][DIM], acid * acids_list[NUM_ACIDS], int index
 }
 
 #define GRID_FILENAME "grid.out.txt"
-void save_grid(acid * pgrid[DIM][DIM][DIM], acid * acids[NUM_ACIDS])
+void save_grid(char * filename, acid * pgrid[DIM][DIM][DIM], acid * acids[NUM_ACIDS])
 {
-    FILE * f = fopen(GRID_FILENAME, "w");
+    FILE * f = fopen(filename, "w");
     fprintf(f, "acid,x,y,z,hydrophilic\n");
     for (int index = 0; index < NUM_ACIDS; index++)
     {
@@ -476,6 +476,20 @@ void save_grid(acid * pgrid[DIM][DIM][DIM], acid * acids[NUM_ACIDS])
     }
     fclose(f);
 }
+
+void save_contact_map(char *filename, contact_map * map, acid * acids[NUM_ACIDS])
+{
+    FILE * f = fopen(filename, "w");
+    fprintf(f, "name");
+    for (int i = 0; i < NUM_ACIDS; i++)
+    {
+        fprintf(f, ",%s", acids[i]->name);
+    }
+    fprintf(f, "\n");
+    fclose(f);
+}
+
+
 
 
 
@@ -539,7 +553,59 @@ void print_acids_backwards(acid * last)
     printf("\n");
 }
 
-
+int get_unique_entries(entry * input[BOUND*BOUND*BOUND*NUM_TRACK], entry * output[BOUND*BOUND*BOUND*NUM_TRACK])
+{
+    entry * storage[BOUND*BOUND*BOUND*NUM_TRACK];
+    int storageIndex = 0;
+    //Put all unique entries into storage
+    for (int i = 0; i < BOUND*BOUND*BOUND*NUM_TRACK; i++)
+    {
+        bool shouldInsert = true;
+        for (int j = i + 1; j < BOUND*BOUND*BOUND*NUM_TRACK; j++)
+        {
+            if (!areDifferent(input[i]->map, input[j]->map))
+            {
+                shouldInsert = false;
+                break;
+            }
+        }
+        if (shouldInsert == true)
+        {
+            storage[storageIndex] = input[i];
+            storageIndex++;
+        }
+    }
+    //Sort the entries 
+    int num_unique = storageIndex;
+    for (int i = 0; i < num_unique; i++)
+    {
+        entry * min = NULL;
+        int min_index = -1;
+        for (int j = 0; j < num_unique; j++)
+        {
+            if (min == NULL)
+            {
+                if (storage[j] != NULL)
+                {
+                    min = storage[j];
+                    min_index = j;
+                }
+            }
+            if (storage[j] != NULL)
+            {
+                if (storage[j]->energy < min->energy)
+                {
+                    min = storage[j];
+                    min_index = j;
+                }
+            }
+        }
+        output[i] = min;
+        storage[min_index] = NULL;
+    }
+    return num_unique;
+    
+}
 
 int main(int argc, char** argv)
 {
@@ -719,27 +785,59 @@ int main(int argc, char** argv)
     }
     //Now we get to find the actual best and worst structures by comparing results
     //of different threads
-
-    //Step 1 is to ensure no repeats (hypothetically? possible)
-    entry *best_results[NUM_TRACK*BOUND*BOUND*BOUND];
-    entry *worst_results[NUM_TRACK*BOUND*BOUND*BOUND];
-    thread_arg * thread_args_linear[BOUND*BOUND*BOUND];
-    int linearIndex = 0;
+    entry * combined_best[BOUND*BOUND*BOUND*NUM_TRACK];
+    entry * combined_worst[BOUND*BOUND*BOUND*NUM_TRACK];
+    int index = 0;
     for (int x = 0; x < BOUND; x++)
     {
         for (int y = 0; y < BOUND; y++)
         {
             for (int z = 0; z < BOUND; z++)
             {
-                thread_args_linear[linearIndex] = ThreadData[x][y][z];
-                linearIndex++;
+                for (int i = 0; i < NUM_TRACK; i++)
+                {
+                    combined_best[index] = &(ThreadData[x][y][z]->best_energies[i]);
+                    combined_worst[index] = &(ThreadData[x][y][z]->worst_energies[i]);
+                    index++;
+                }
             }
         }
     }
-    for (int index = 0; index < BOUND*BOUND*BOUND; index++)
+
+    entry * unique_best[BOUND*BOUND*BOUND*NUM_TRACK];
+    entry * unique_worst[BOUND*BOUND*BOUND*NUM_TRACK];
+
+    int num_best = get_unique_entries(combined_best, unique_best);
+    printf("Number of unique best entries: %d\n", num_best);
+    int num_worst = get_unique_entries(combined_worst, unique_worst);
+    printf("Number of unique worst entries: %d\n", num_worst);
+
+    //Save the grids and maps
+    for (int i = 0; i < num_best; i++)
     {
-        printf("%d, %d, %d\n", thread_args_linear[index]->x, thread_args_linear[index]->y, thread_args_linear[index]->z);
+        char filename[200];
+        sprintf(&filename[0], "best/%dbest.grid", i);
+        save_grid(filename, unique_best[i]->grid, acids);
+        char filename2[200];
+        sprintf(&filename2[0], "best/%dbest.map", i);
+        save_contact_map(filename2, unique_best[i]->map, acids);
+        printf("%s\n", filename);
     }
+
+    for (int i = num_worst - 1; i > -1; i--)
+    {
+        //Go in reverse order
+        char filename[200];
+        sprintf(&filename[0], "worst/%dworst.grid", i);
+        save_grid(filename, unique_worst[i]->grid, acids);
+        char filename2[200];
+        sprintf(&filename2[0], "worst/%dworst.map", i);
+        save_contact_map(filename2, unique_worst[i]->map, acids);
+        printf("%s\n", filename);
+    }
+
+
+    
 #   endif
 
     
@@ -747,7 +845,7 @@ int main(int argc, char** argv)
     // //Write to PDB file
     // //write_PDB(optimal_configuration);
     // write_PDB_TWO(optimal_configuration, acids);
-    save_grid(true_optimal_grid, acids);
+    save_grid("optimal.out", true_optimal_grid, acids);
 
     // //Cleanup
     for (int x = 0; x < DIM; x++)
@@ -770,6 +868,7 @@ int main(int argc, char** argv)
                 for (int index = 0; index < NUM_TRACK; index++)
                 {
                     free(ThreadData[x][y][z]->best_energies[index].map);
+                    free(ThreadData[x][y][z]->worst_energies[index].map);
                 }
 #               endif
                 free(ThreadData[x][y][z]);

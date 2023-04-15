@@ -13,7 +13,7 @@
 #ifndef C1
 #define TRACK
 #endif
-#define NUM_TRACK 8
+#define NUM_TRACK 2
 
 //Bound defines the range of starting positions
 // #if (DIM / 2) < (DIM - DIM / 2)

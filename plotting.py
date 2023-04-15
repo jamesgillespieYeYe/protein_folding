@@ -3,8 +3,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import sys
+
+filename = "grid.out.txt"
+if (len(sys.argv) > 1):
+    filename = sys.argv[1]
 
 
+print("Reading grid from", filename)
 data = pd.read_csv("grid.out.txt", ',')
 print(data)
 
@@ -26,7 +32,7 @@ for index in range(0, len(data)):
     else:
         colors.append("red")
     size.append(20)
-
+ax.set_title(filename)
 ax.scatter3D(xData, yData, zData, '--o', s = size, c = colors)
 for index in range(0, len(data)):
     row = data.loc[index]
