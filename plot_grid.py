@@ -11,7 +11,7 @@ if (len(sys.argv) > 1):
 
 
 print("Reading grid from", filename)
-data = pd.read_csv("grid.out.txt", ',')
+data = pd.read_csv(filename, ',')
 print(data)
 
 

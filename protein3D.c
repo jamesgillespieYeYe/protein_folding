@@ -486,6 +486,15 @@ void save_contact_map(char *filename, contact_map * map, acid * acids[NUM_ACIDS]
         fprintf(f, ",%s", acids[i]->name);
     }
     fprintf(f, "\n");
+    for (int i = 0; i < NUM_ACIDS; i++)
+    {
+        fprintf(f, "%s", acids[i]->name);
+        for (int j = 0; j < NUM_ACIDS; j++)
+        {
+            fprintf(f, ",%d", map->map[i][j]);
+        }
+        fprintf(f, "\n");
+    }
     fclose(f);
 }
 
