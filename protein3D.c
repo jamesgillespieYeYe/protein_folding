@@ -480,18 +480,24 @@ void save_grid(char * filename, acid * pgrid[DIM][DIM][DIM], acid * acids[NUM_AC
 void save_contact_map(char *filename, contact_map * map, acid * acids[NUM_ACIDS])
 {
     FILE * f = fopen(filename, "w");
-    fprintf(f, "name");
+    //fprintf(f, "name");
+    // for (int i = 0; i < NUM_ACIDS; i++)
+    // {
+    //     fprintf(f, ",%s", acids[i]->name);
+    // }
     for (int i = 0; i < NUM_ACIDS; i++)
     {
-        fprintf(f, ",%s", acids[i]->name);
-    }
-    fprintf(f, "\n");
-    for (int i = 0; i < NUM_ACIDS; i++)
-    {
-        fprintf(f, "%s", acids[i]->name);
+        //fprintf(f, "%s", acids[i]->name);
         for (int j = 0; j < NUM_ACIDS; j++)
         {
-            fprintf(f, ",%d", map->map[i][j]);
+            if (j == 0)
+            {
+                fprintf(f, "%d", map->map[i][j]);
+            }
+            else
+            {
+                fprintf(f, ",%d", map->map[i][j]);
+            }   
         }
         fprintf(f, "\n");
     }
@@ -828,7 +834,7 @@ int main(int argc, char** argv)
         sprintf(&filename[0], "best/%dbest.grid", i);
         save_grid(filename, unique_best[i]->grid, acids);
         char filename2[200];
-        sprintf(&filename2[0], "best/%dbest.map", i);
+        sprintf(&filename2[0], "best/%d_best.map", i);
         save_contact_map(filename2, unique_best[i]->map, acids);
         printf("%s\n", filename);
     }
@@ -840,7 +846,7 @@ int main(int argc, char** argv)
         sprintf(&filename[0], "worst/%dworst.grid", i);
         save_grid(filename, unique_worst[i]->grid, acids);
         char filename2[200];
-        sprintf(&filename2[0], "worst/%dworst.map", i);
+        sprintf(&filename2[0], "worst/%d_worst.map", i);
         save_contact_map(filename2, unique_worst[i]->map, acids);
         printf("%s\n", filename);
     }

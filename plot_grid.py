@@ -6,11 +6,21 @@ import pandas as pd
 import sys
 
 filename = "grid.out.txt"
+r_mode = False
+r_coords_file = None
 if (len(sys.argv) > 1):
     filename = sys.argv[1]
+if (len(sys.argv) > 2):
+    if sys.argv[2] == "r_mode":
+        r_mode = 1
+        r_coords_file = sys.argv[3]
+
+
+
 
 
 print("Reading grid from", filename)
+print("rmode: ", r_mode, "r_coords_file", r_coords_file)
 data = pd.read_csv(filename, ',')
 print(data)
 
