@@ -448,6 +448,11 @@ void insert(acid * pgrid[DIM][DIM][DIM], acid * acids_list[NUM_ACIDS], int index
 void save_grid(char * filename, acid * pgrid[DIM][DIM][DIM], acid * acids[NUM_ACIDS])
 {
     FILE * f = fopen(filename, "w");
+    if (f == NULL)
+    {
+        printf("Error opening %s\n", filename);
+        exit(1);
+    }
     fprintf(f, "acid,x,y,z,hydrophilic\n");
     for (int index = 0; index < NUM_ACIDS; index++)
     {
@@ -480,6 +485,11 @@ void save_grid(char * filename, acid * pgrid[DIM][DIM][DIM], acid * acids[NUM_AC
 void save_contact_map(char *filename, contact_map * map, acid * acids[NUM_ACIDS])
 {
     FILE * f = fopen(filename, "w");
+    if (f == NULL)
+    {
+        printf("Error opening %s\n", filename);
+        exit(1);
+    }
     //fprintf(f, "name");
     // for (int i = 0; i < NUM_ACIDS; i++)
     // {
@@ -831,7 +841,7 @@ int main(int argc, char** argv)
     for (int i = 0; i < num_best; i++)
     {
         char filename[200];
-        sprintf(&filename[0], "best/%dbest.grid", i);
+        sprintf(&filename[0], "best/%d_best.grid", i);
         save_grid(filename, unique_best[i]->grid, acids);
         char filename2[200];
         sprintf(&filename2[0], "best/%d_best.map", i);
@@ -843,7 +853,7 @@ int main(int argc, char** argv)
     {
         //Go in reverse order
         char filename[200];
-        sprintf(&filename[0], "worst/%dworst.grid", i);
+        sprintf(&filename[0], "worst/%d_worst.grid", i);
         save_grid(filename, unique_worst[i]->grid, acids);
         char filename2[200];
         sprintf(&filename2[0], "worst/%d_worst.map", i);
