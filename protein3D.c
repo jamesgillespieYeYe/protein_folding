@@ -10,7 +10,6 @@
 
 
 
-
 //coordinate * get_positions(int x, int y, int z);
 coordinate * Spatial_Database[DIM][DIM][DIM];
 //void print_grid(acid * pgrid[DIM][DIM][DIM]);
