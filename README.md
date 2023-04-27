@@ -47,6 +47,7 @@
  * 
  * There are several modes the program can be run in - they are defined in the header
  * file. See the writeup for an explanation. A secondary program plots results.
- *  
+ * 
+ * compile with gcc -o proteins -ggdb3 -pthread protein3D.c 
  * 
 */
