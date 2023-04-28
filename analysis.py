@@ -154,7 +154,13 @@ def find_max(matrix):
                 max_value = matrix[i][j]
     return max_value
 
+def cell_color(index):
+    if index in POLAR:
+        return '\\cellcolor{red}'
+    else:
+        return '\\cellcolor{blue}'
 
+ACIDS = ["ASN", "LEU", "TYR", "ILE", "GLN", "TRP", "LEU", "LYS", "ASP", "GLY", "GLY", "PRO", "SER", "SER", "GLY", "ARG", "PRO", "PRO", "PRO", "SER"]
 def find_representative(filelist, num, sum_matrix, threshold=1):
     newFilelist = []
     for filename in filelist:
@@ -172,7 +178,10 @@ def find_representative(filelist, num, sum_matrix, threshold=1):
             if max_value - threshold <= sum_matrix[i][j]:
                 contact_pairs.append((i, j))
     print("Contact pairs found: ", contact_pairs)
-
+    for pair in contact_pairs:
+        line = cell_color(pair[0]) + ' ' + ACIDS[pair[0]] + ' (' + str(pair[0]) + ')' + ' & ' +  cell_color(pair[1]) + ' ' + ACIDS[pair[1]] + ' (' + str(pair[1]) + ') \\\\'
+        print(line)
+        print("\\hline")
     representatives = []
     for filename in newFilelist:
         matrix = load_map(filename)
